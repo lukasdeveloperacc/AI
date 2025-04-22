@@ -1,0 +1,4 @@
+dataset/
+*.tar*
+__pycache__/
+*.png
