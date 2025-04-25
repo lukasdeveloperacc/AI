@@ -6,7 +6,7 @@ from mcp.client.stdio import stdio_client
 import json, shutil, os, asyncio, logging
 
 
-class Server:
+class MCPStdioServer:
     def __init__(self, name: str, mcp_config_path: str):
         self._name = name
         self._mcp_config_path = mcp_config_path
@@ -64,13 +64,11 @@ class Server:
 
     async def run(self) -> None:
         try:
+            logging.info("Start running MCP Stdio Server")
             stdio_transport = await self._stack.enter_async_context(stdio_client(self._mcp_server_params))
             read, write = stdio_transport
-            session = await self._stack.enter_async_context(ClientSession(read, write))
-            await session.initialize()
-            self._mcp_server_session = session
-
-            logging.info("Running MCP server")
+            self._mcp_server_session = await self._stack.enter_async_context(ClientSession(read, write))
+            await self._mcp_server_session.initialize()
             await self._stop_event.wait()
 
         except Exception as e:
@@ -90,6 +88,26 @@ class Server:
             except Exception as e:
                 logging.error(f"Error during cleanup of server : {e}")
                 raise
+
+    async def wait_until_ready(self, timeout: float = 60.0):
+        start = asyncio.get_event_loop().time()
+        while self._mcp_server_session is None:
+            if asyncio.get_event_loop().time() - start > timeout:
+                raise TimeoutError("Timed out waiting for MCP server to be ready")
+            await asyncio.sleep(0.1)
+
+
+class MCPInterfaceWithServer:
+    def __init__(self, mcp_server: MCPStdioServer):
+        self._mcp_server = mcp_server
+        self._mcp_server_session = self._mcp_server.session
+
+    async def init(self):
+        await self._mcp_server.wait_until_ready()
+        self._mcp_server_session = self._mcp_server.session
+
+    def stop(self):
+        self._mcp_server.stop()
 
     async def list_tools(self) -> list[str]:
         def format_for_llm(name: str, description: str, input_schema: dict[str, Any]) -> str:
@@ -134,18 +152,15 @@ class Server:
 
 
 async def main() -> None:
-    mcp_server = Server(name="slack", mcp_config_path="mcp_config.json")
+    mcp_server = MCPStdioServer(name="slack", mcp_config_path="mcp_config.json")
     asyncio.create_task(mcp_server.run())
+    mcp_interface = MCPInterfaceWithServer(mcp_server=mcp_server)
+    await mcp_interface.init()
 
-    while mcp_server.session is None:
-        logging.info("Waiting for server to start...")
-        await asyncio.sleep(1)
-
-    tools = await mcp_server.list_tools()
+    tools = await mcp_interface.list_tools()
     logging.info(f"Tools: {tools}")
 
-    await asyncio.sleep(15)
-    mcp_server.stop()
+    mcp_interface.stop()
 
 
 if __name__ == "__main__":
