@@ -68,7 +68,11 @@ class MCPHost:
             logging.info(f"Selected tool :\n{access_tool_info}")
 
             self._llm_client.add_message("assistant", llm_response)
-            result = await self._interface.call_tool(access_tool_info.get("tool"), access_tool_info.get("arguments"))
+            tool_response = await self._interface.call_tool(
+                access_tool_info.get("tool"), access_tool_info.get("arguments")
+            )
+            self._llm_client.add_message("system", tool_response)
+            result = self._llm_client.get_response()
 
         except Exception as e:
             logging.error(e)
