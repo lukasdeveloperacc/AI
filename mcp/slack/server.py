@@ -103,13 +103,26 @@ class MCPInterfaceWithServer:
         self._mcp_server_session = self._mcp_server.session
 
     async def init(self):
+        if isinstance(self._mcp_server, MCPStdioServer):
+            asyncio.create_task(self._mcp_server.run())
+
         await self._mcp_server.wait_until_ready()
         self._mcp_server_session = self._mcp_server.session
 
     def stop(self):
         self._mcp_server.stop()
 
-    async def list_tools(self) -> list[str]:
+    async def list_tools(self) -> list[tuple[str, list[Tool]]]:
+        if not self._mcp_server_session:
+            raise RuntimeError("Server is not running")
+        else:
+            logging.info("Run list_tools")
+
+        response = await self._mcp_server_session.list_tools()
+
+        return list(response)
+
+    async def get_tools_description(self) -> list[str]:
         def format_for_llm(name: str, description: str, input_schema: dict[str, Any]) -> str:
             args_desc = []
             if "properties" in input_schema:
@@ -122,27 +135,24 @@ class MCPInterfaceWithServer:
 
             return f"Tool: {name}\nDescription: {description}\nArguments:\n{chr(10).join(args_desc)}"
 
-        if not self._mcp_server_session:
-            raise RuntimeError("Server is not running")
-        else:
-            logging.info("Run list_tools")
-
-        response = await self._mcp_server_session.list_tools()
-        tool_list = []
-        item: tuple[str, list[Tool]]
-        for item in response:
+        tools_list = await self.list_tools()
+        tools_description = []
+        for item in tools_list:
             if isinstance(item, tuple) and item[0] == "tools":
                 tools = item[1]
-                tool_list = [format_for_llm(tool.name, tool.description, tool.inputSchema) for tool in tools]
+                for tool in tools:
+                    tools_description.append(format_for_llm(tool.name, tool.description, tool.inputSchema))
 
-        return tool_list
+        logging.info(f"Tools description :\n{tools_description}")
+        return tools_description
 
-    async def call_tool(self, tool_name: str, args: dict[str, Any]) -> Any:
+    async def call_tool(self, tool_name: str, args: dict[str, Any]) -> str:
         if self._mcp_server_session is None:
             raise RuntimeError("Server is not running")
 
         try:
             result = await self._mcp_server_session.call_tool(tool_name, args)
+            result = result.content[0].text
             logging.info(f"Result: {result}")
             return result
 

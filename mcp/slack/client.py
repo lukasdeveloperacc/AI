@@ -1,46 +1,26 @@
-from mcp import ClientSession
-from server import Server
+from server import MCPStdioServer, MCPInterfaceWithServer
 from openai import OpenAI
+from dotenv import load_dotenv
+
+import asyncio, logging, os
 
 
 class OpenAIClient:
     def __init__(self, api_key: str, model_name: str = "gpt-4o-mini"):
         self._client = OpenAI(api_key=api_key)
         self._model_name = model_name
-        self._system_prompt: dict[str, str] = {"role": "system", "content": ""}
-        self._user_prompt: dict[str, str] = {"role": "user", "content": ""}
+        self._messages: list[dict[str, str]] = []
 
-    @property
-    def system_prompt(self) -> str:
-        return self._system_prompt.get("content")
-
-    @system_prompt.setter
-    def system_prompt(self, prompt: str) -> None:
-        self._system_prompt.update({"content": prompt})
-
-    @property
-    def user_prompt(self) -> str:
-        return self._user_prompt.get("content")
-
-    @user_prompt.setter
-    def user_prompt(self, prompt: str) -> None:
-        self._user_prompt.update({"content": prompt})
+    def add_message(self, role: str, message: str) -> None:
+        self._messages.append({"role": role, "content": message})
 
     def get_response(self) -> str:
-        messages = []
-        if not (self.system_prompt and self.user_prompt):
-            raise ValueError(
-                f"Check system prompt : {self.system_prompt}, user prompt : {self.user_prompt}. You must set these"
-            )
-        else:
-            messages.append(self._system_prompt)
-            messages.append(self._user_prompt)
-
         try:
             response = self._client.chat.completions.create(
                 model=self._model_name,
-                messages=messages,
+                messages=self._messages,
             )
+            logging.info(f"LLM Response :\n{response}")
 
             return response.choices[0].message.content
 
@@ -49,24 +29,62 @@ class OpenAIClient:
             raise
 
 
-class Client:
-    def __init__(self, session: ClientSession):
-        self._session = session
+class MCPHost:
+    def __init__(self, llm_client: OpenAIClient, interface: MCPInterfaceWithServer):
+        self._llm_client = llm_client
+        self._interface = interface
+
+    async def execute(self, query: str) -> None:
+        try:
+            await self._interface.init()
+            tools_description = await self._interface.get_tools_description()
+            system_message = (
+                "You are a helpful assistant with access to these tools:\n\n"
+                f"{tools_description}\n"
+                "Choose the appropriate tool based on the user's question. "
+                "If no tool is needed, reply directly.\n\n"
+                "IMPORTANT: When you need to use a tool, you must ONLY respond with "
+                "the exact JSON object format below, nothing else:\n"
+                "{\n"
+                '    "tool": "tool-name",\n'
+                '    "arguments": {\n'
+                '        "argument-name": "value"\n'
+                "    }\n"
+                "}\n\n"
+                "After receiving a tool's response:\n"
+                "1. Transform the raw data into a natural, conversational response\n"
+                "2. Keep responses concise but informative\n"
+                "3. Focus on the most relevant information\n"
+                "4. Use appropriate context from the user's question\n"
+                "5. Avoid simply repeating the raw data\n\n"
+                "Please use only the tools that are explicitly defined above."
+            )
+            self._llm_client.add_message("system", system_message)
+            self._llm_client.add_message("user", query)
+            import json
+
+            llm_response = self._llm_client.get_response()
+            access_tool_info: dict[str, str] = json.loads(llm_response)
+            logging.info(f"Selected tool :\n{access_tool_info}")
+
+            self._llm_client.add_message("assistant", llm_response)
+            result = await self._interface.call_tool(access_tool_info.get("tool"), access_tool_info.get("arguments"))
+
+        except Exception as e:
+            logging.error(e)
+            raise
+
+        finally:
+            self._interface.stop()
 
 
 if __name__ == "__main__":
-    import os, asyncio, logging
+    logging.basicConfig(level=logging.INFO)
+    # run server
+    load_dotenv()
+    mcp_server = MCPStdioServer(name="slack", mcp_config_path="mcp_config.json")
+    mcp_interface = MCPInterfaceWithServer(mcp_server=mcp_server)
+    llm_client = OpenAIClient(os.getenv("OPENAI_API_KEY"))
 
-    api_key = os.getenv("OPENAI_API_KEY")
-    mcp_server = Server(name="slack", mcp_config_path="mcp_config.json")
-    asyncio.create_task(mcp_server.run())
-
-    # while mcp_server.session is None:
-    #     logging.info("Waiting for server to start...")
-    #     await asyncio.sleep(1)
-
-    # tools = await mcp_server.list_tools()
-    # logging.info(f"Tools: {tools}")
-
-    # await asyncio.sleep(15)
-    # mcp_server.stop()
+    mcp_host = MCPHost(llm_client, mcp_interface)
+    asyncio.run(mcp_host.execute("슬랙채널에 어떤 채널이 있어 ?"))
