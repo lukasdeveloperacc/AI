@@ -23,4 +23,4 @@ class ReduceChainInput(MapChainOutput):
 
 
 class ReduceChainOutput(BaseModel):
-    summary: str
+    summary: str = Field(..., description="Reduce chani output")

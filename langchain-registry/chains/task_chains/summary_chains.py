@@ -1,13 +1,13 @@
 from chains.preprocess_chains import DocumentPreprocessor
 from chains.composed_chains import MapReduceChain
 from chains.constants import SummaryMode
-from chains.task_chains.summary_models import SummaryChainInput, SummaryChainOutput
+from chains.task_chains.summary_models import SummaryChainInput
 
 from langchain_core.runnables import Runnable, RunnableConfig
 from langchain_core.output_parsers import StrOutputParser
 from langchain_openai import ChatOpenAI
 
-from typing import Any
+from typing import Any, Iterator
 from dotenv import load_dotenv
 
 import os
@@ -15,7 +15,7 @@ import os
 load_dotenv()
 
 
-class ResearchPaperSummaryChain(Runnable[SummaryChainInput, SummaryChainOutput]):
+class ResearchPaperSummaryChain(Runnable):
     def __init__(self, mode: str = SummaryMode.MAP_REDUCE.value, preprocess_args: dict[str, Any] = {}):
         super().__init__()
 
@@ -45,12 +45,29 @@ class ResearchPaperSummaryChain(Runnable[SummaryChainInput, SummaryChainOutput])
 
         return DocumentPreprocessor(loader_cls=PyMuPDFLoader, loader_args={}, splitter=splitter)
 
-    def invoke(self, _input: SummaryChainInput, config: RunnableConfig | None = None) -> SummaryChainOutput:
+    def invoke(self, _input: SummaryChainInput, config: RunnableConfig | None = None) -> str:
         _config = RunnableConfig(**config) if config is not None else RunnableConfig()
         _config.update({"configurable": {"language": _input.language}})
         output = self._chain.invoke(_input, config=_config)
 
-        return SummaryChainOutput(summary=output.summary)
+        return output.summary
+
+    def stream(self, _input: SummaryChainInput, config: RunnableConfig | None = None) -> Iterator[str]:
+        try:
+            _config = RunnableConfig(**config) if config is not None else RunnableConfig()
+            _config.update({"configurable": {"language": _input.language}})
+            for chunk in self._chain.stream(_input, config=config):
+                yield chunk.summary
+
+        except Exception as e:
+            raise Exception(f"Fail to stream chain : {e}")
+
+    def batch(self, _input: SummaryChainInput, config: RunnableConfig | None = None) -> list[str]:
+        _config = RunnableConfig(**config) if config is not None else RunnableConfig()
+        _config.update({"configurable": {"language": _input.language}})
+        outputs = self._chain.batch(_input, config=_config)
+
+        return [output.summary for output in outputs]
 
 
 if __name__ == "__main__":
@@ -63,7 +80,7 @@ if __name__ == "__main__":
         b = f.read()
         b = base64.b64encode(b)
         b = b.decode("utf-8")
-        _input = SummaryChainInput(base64_str=b)
+        _input = SummaryChainInput(base64_file=b)
 
         result = chain.invoke(
             _input,

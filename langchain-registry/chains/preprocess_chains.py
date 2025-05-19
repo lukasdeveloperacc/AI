@@ -26,7 +26,7 @@ class DocumentPreprocessor(Runnable[DocumentPreprocessInput, DocumentPreprocessO
     @staticmethod
     def load_pdf_from_base64(_input: DocumentPreprocessInput) -> DocumentPreprocessInput:
         try:
-            pdf_bytes: io.BytesIO = base64.b64decode(_input.base64_str)
+            pdf_bytes: io.BytesIO = base64.b64decode(_input.base64_file)
 
             with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
                 logging.info(f"Save from base64 string to pdf file : {tmp.name}")
@@ -44,7 +44,7 @@ class DocumentPreprocessor(Runnable[DocumentPreprocessInput, DocumentPreprocessO
 
     def route(self, _input: DocumentPreprocessInput):
         try:
-            if _input.base64_str:
+            if _input.base64_file:
                 return RunnableLambda(self.load_pdf_from_base64)
             else:
                 return _input
@@ -75,16 +75,3 @@ class DocumentPreprocessor(Runnable[DocumentPreprocessInput, DocumentPreprocessO
         docs = chain.invoke(_input, config)
 
         return DocumentPreprocessOutput(docs=docs)
-
-
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-    with open("summary/1706.03762v7.pdf", "rb") as f:
-        b = f.read()
-        b = base64.b64encode(b)
-        b = b.decode("utf-8")
-
-        preprocessor = DocumentPreprocessor(loader_cls=PyMuPDFLoader, splitter=RecursiveCharacterTextSplitter())
-        result = preprocessor.invoke(DocumentPreprocessInput(base64_str=b))
-
-        logging.info(f"{type(result)}")

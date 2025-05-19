@@ -9,6 +9,6 @@ dependencies = [
     "langchain-community>=0.3.22",
     "langchain-core>=0.3.56",
     "langchain-openai>=0.3.14",
-    "langserve>=0.3.1",
+    "langserve[all]>=0.3.1",
     "pymupdf>=1.25.5",
 ]
