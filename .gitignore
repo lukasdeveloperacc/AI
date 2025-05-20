@@ -2,3 +2,6 @@ dataset/
 *.tar*
 __pycache__/
 *.png
+.env
+.python-version
+.venv/
