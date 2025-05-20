@@ -7,6 +7,7 @@ from langsmith import Client
 from chains.atomic_models import MapChainInput, MapChainOutput, ReduceChainInput, ReduceChainOutput
 
 from dotenv import load_dotenv
+from typing import Iterator, AsyncIterator
 
 import os, logging
 
@@ -22,10 +23,11 @@ class MapChain(Runnable[MapChainInput, MapChainOutput]):
         self._prompt.pretty_print()
         self._llm = llm
         self._output_parser = output_paresr
+        self._chain = self._prompt | self._llm | self._output_parser
 
     def invoke(self, _input: MapChainInput, config: RunnableConfig | None = None) -> MapChainOutput:
-        chain = self._prompt | self._llm | self._output_parser
-        doc_summaries = chain.batch(_input.docs, config)
+        logging.info(f"{__class__.__name__} Invoke")
+        doc_summaries = self._chain.batch(_input.docs, config)
         logging.info(f"docs summaies : {type(doc_summaries)}, {len(doc_summaries)}")
         logging.info(f"docs element type  : {type(doc_summaries[0])}")
 
@@ -51,3 +53,29 @@ class ReduceChain(Runnable[ReduceChainInput, ReduceChainOutput]):
         summary = self._chain.invoke(_input.model_dump(), config)
 
         return ReduceChainOutput(summary=summary)
+
+    def stream(self, _input: ReduceChainInput, config: RunnableConfig | None = None) -> Iterator[ReduceChainOutput]:
+        try:
+            logging.info(f"{__class__.__name__} Stream")
+            if config.get("configurable"):
+                _input.language = config.get("configurable")["language"]
+
+            for chunk in self._chain.stream(_input.model_dump(), config=config):
+                yield ReduceChainOutput(summary=chunk)
+
+        except Exception as e:
+            raise Exception(f"Fail to stream chain : {e}")
+
+    async def astream(
+        self, _input: ReduceChainInput, config: RunnableConfig | None = None
+    ) -> AsyncIterator[ReduceChainOutput]:
+        try:
+            logging.info(f"{__class__.__name__} AStream")
+            if config.get("configurable"):
+                _input.language = config.get("configurable")["language"]
+
+            async for chunk in self._chain.astream(_input.model_dump(), config=config):
+                yield ReduceChainOutput(summary=chunk)
+
+        except Exception as e:
+            raise Exception(f"Fail to stream chain : {e}")

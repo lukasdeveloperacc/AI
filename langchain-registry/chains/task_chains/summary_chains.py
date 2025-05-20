@@ -7,15 +7,16 @@ from langchain_core.runnables import Runnable, RunnableConfig
 from langchain_core.output_parsers import StrOutputParser
 from langchain_openai import ChatOpenAI
 
-from typing import Any, Iterator
+from typing import Any, Iterator, AsyncIterable
 from dotenv import load_dotenv
 
 import os
+import logging
 
 load_dotenv()
 
 
-class ResearchPaperSummaryChain(Runnable):
+class ResearchPaperSummaryChain(Runnable[SummaryChainInput, str]):
     def __init__(self, mode: str = SummaryMode.MAP_REDUCE.value, preprocess_args: dict[str, Any] = {}):
         super().__init__()
 
@@ -46,6 +47,7 @@ class ResearchPaperSummaryChain(Runnable):
         return DocumentPreprocessor(loader_cls=PyMuPDFLoader, loader_args={}, splitter=splitter)
 
     def invoke(self, _input: SummaryChainInput, config: RunnableConfig | None = None) -> str:
+        logging.info(f"{__class__.__name__} Invoke")
         _config = RunnableConfig(**config) if config is not None else RunnableConfig()
         _config.update({"configurable": {"language": _input.language}})
         output = self._chain.invoke(_input, config=_config)
@@ -54,6 +56,7 @@ class ResearchPaperSummaryChain(Runnable):
 
     def stream(self, _input: SummaryChainInput, config: RunnableConfig | None = None) -> Iterator[str]:
         try:
+            logging.info(f"{__class__.__name__} Stream")
             _config = RunnableConfig(**config) if config is not None else RunnableConfig()
             _config.update({"configurable": {"language": _input.language}})
             for chunk in self._chain.stream(_input, config=config):
@@ -62,29 +65,13 @@ class ResearchPaperSummaryChain(Runnable):
         except Exception as e:
             raise Exception(f"Fail to stream chain : {e}")
 
-    def batch(self, _input: SummaryChainInput, config: RunnableConfig | None = None) -> list[str]:
-        _config = RunnableConfig(**config) if config is not None else RunnableConfig()
-        _config.update({"configurable": {"language": _input.language}})
-        outputs = self._chain.batch(_input, config=_config)
+    async def astream(self, _input: SummaryChainInput, config: RunnableConfig | None = None) -> AsyncIterable[str]:
+        try:
+            logging.info(f"{__class__.__name__} AStream")
+            _config = RunnableConfig(**config) if config is not None else RunnableConfig()
+            _config.update({"configurable": {"language": _input.language}})
+            async for chunk in self._chain.astream(_input, config=config):
+                yield chunk.summary
 
-        return [output.summary for output in outputs]
-
-
-if __name__ == "__main__":
-    import logging, base64
-
-    logging.basicConfig(level=logging.INFO)
-
-    chain = ResearchPaperSummaryChain(preprocess_args={"chunk_size": 1000, "chunk_overlap": 50})
-    with open("chains/1706.03762v7.pdf", "rb") as f:
-        b = f.read()
-        b = base64.b64encode(b)
-        b = b.decode("utf-8")
-        _input = SummaryChainInput(base64_file=b)
-
-        result = chain.invoke(
-            _input,
-            config=RunnableConfig(configurable={"language": _input.language}),
-        )
-
-        logging.info(f"{result}")
+        except Exception as e:
+            raise Exception(f"Fail to stream chain : {e}")

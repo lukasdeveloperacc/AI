@@ -22,6 +22,12 @@ class DocumentPreprocessor(Runnable[DocumentPreprocessInput, DocumentPreprocessO
         self._loader_cls = loader_cls
         self._loader_args = loader_args
         self._splitter = splitter
+        self._chain = (
+            RunnableLambda(DocumentPreprocessInput.from_output)
+            | RunnableLambda(self.route)
+            | RunnableLambda(self.load_pdf)
+            | RunnableLambda(self.split_docs)
+        )
 
     @staticmethod
     def load_pdf_from_base64(_input: DocumentPreprocessInput) -> DocumentPreprocessInput:
@@ -71,7 +77,7 @@ class DocumentPreprocessor(Runnable[DocumentPreprocessInput, DocumentPreprocessO
             raise
 
     def invoke(self, _input: DocumentPreprocessInput, config: RunnableConfig | None = None) -> DocumentPreprocessOutput:
-        chain = RunnableLambda(self.route) | RunnableLambda(self.load_pdf) | RunnableLambda(self.split_docs)
-        docs = chain.invoke(_input, config)
+        logging.info(f"{__class__.__name__} Invoke")
+        docs = self._chain.invoke(_input, config)
 
         return DocumentPreprocessOutput(docs=docs)
