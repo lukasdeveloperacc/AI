@@ -81,3 +81,51 @@ class DocumentPreprocessor(Runnable[DocumentPreprocessInput, DocumentPreprocessO
         docs = self._chain.invoke(_input, config)
 
         return DocumentPreprocessOutput(docs=docs)
+
+
+from chains.retriever_chains import BaseRetrieverChain
+
+
+class PDFChain(BaseRetrieverChain):
+    def __init__(
+        self,
+        vector_store,
+        vector_store_path=None,
+        documents=None,
+        loader=None,
+        splitter=None,
+        embdding=None,
+    ) -> None:
+        super().__init__(
+            vector_store,
+            vector_store_path,
+            documents,
+            loader,
+            splitter,
+            embdding,
+        )
+
+    @staticmethod
+    def save_pdf_from_base64(base64_str: str, save_dir: str) -> str:
+        import shutil, os
+
+        try:
+            pdf_bytes: io.BytesIO = base64.b64decode(base64_str)
+            save_path = ""
+            with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
+                tmp.write(pdf_bytes)
+                tmp.flush()
+
+                if save_dir:
+                    save_path = os.path.join(save_dir, tmp.name)
+                    shutil.move(tmp.name, save_path)
+                else:
+                    save_path = tmp.name
+
+                logging.info(f"Save from base64 string to pdf file : {save_path}")
+
+                return save_path
+
+        except Exception as e:
+            logging.error(e)
+            raise
