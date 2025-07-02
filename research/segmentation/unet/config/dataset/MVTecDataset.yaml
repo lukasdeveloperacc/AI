@@ -1,0 +1,4 @@
+MVTecDataset:
+  root_dir: datasets/mvtec
+  data_extensions: ["jpg", "png"]
+  resize: 256

@@ -1,0 +1,18 @@
+version: '3.9'
+
+services:
+  unet-dev:
+    image: pytorch/pytorch:2.7.1-cuda11.8-cudnn9-devel
+    environment:
+      GIT_PYTHON_REFRESH: "quiet"
+    volumes:
+      - ../../..:/workspace
+    command: ["tail", "-f", "/dev/null"]
+
+  unet:
+    build:
+      context: ../../..
+      dockerfile: docker/segmentation/unet/Dockerfile
+    environment:
+      GIT_PYTHON_REFRESH: "quiet"
+

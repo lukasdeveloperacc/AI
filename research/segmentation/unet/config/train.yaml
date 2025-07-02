@@ -1,0 +1,15 @@
+mode: train
+
+defaults:
+  - dataset: MVTecDataset
+  - network: Unet
+  - optimizer: Adam
+  - loss: CrossEntropyLoss
+  - trainer: UnetTrainer
+  - _self_
+
+trainer:
+  UnetTrainer:
+    device: cuda:0
+    epochs: 3
+    including_test: true

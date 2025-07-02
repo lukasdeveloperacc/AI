@@ -1,0 +1,3 @@
+Unet:
+  in_channels: 3
+  conv_channels: [64, 128, 256, 512]

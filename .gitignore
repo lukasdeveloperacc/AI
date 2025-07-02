@@ -1,4 +1,5 @@
-dataset/
+datasets/
 *.tar*
 __pycache__/
 *.png
+outputs/
