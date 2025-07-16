@@ -1,0 +1,9 @@
+UnetTrainer:
+  device: "cuda:0"
+  batch_size: 32
+  epochs: null
+  including_test: false
+  checkpoint_dir: "outputs/checkpoints"
+  pretrained_checkpoint_path: ""
+  is_export_onnx: false
+  is_export_tensorrt: false
