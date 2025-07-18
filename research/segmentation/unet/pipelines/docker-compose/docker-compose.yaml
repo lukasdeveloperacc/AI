@@ -1,0 +1,18 @@
+version: '3.9'
+services:
+  train:
+    build:
+      context: ../../..
+      dockerfile: docker/segmentation/unet/Dockerfile
+    environment:
+      GIT_PYTHON_REFRESH: "quiet"
+
+  test:
+    build:
+      context: ../../..
+      dockerfile: docker/segmentation/unet/Dockerfile
+    environment:
+      GIT_PYTHON_REFRESH: "quiet"
+    depends_on:
+      train:
+        condition: service_completed_successfully

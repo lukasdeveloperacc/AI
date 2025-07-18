@@ -9,3 +9,4 @@ COPY segmentation/unet/ segmentation/unet
 
 ENV GIT_PYTHON_REFRESH="quiet"
 
+CMD [ "python3", "segmentation/unet/train_with_hydra.py" ]
