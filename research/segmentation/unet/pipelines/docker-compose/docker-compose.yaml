@@ -3,16 +3,12 @@ services:
   train:
     build:
       context: ../../..
-      dockerfile: docker/segmentation/unet/Dockerfile
-    environment:
-      GIT_PYTHON_REFRESH: "quiet"
+      dockerfile: docker/segmentation/unet/Dockerfile.train
 
   test:
     build:
       context: ../../..
-      dockerfile: docker/segmentation/unet/Dockerfile
-    environment:
-      GIT_PYTHON_REFRESH: "quiet"
+      dockerfile: docker/segmentation/unet/Dockerfile.test
     depends_on:
       train:
         condition: service_completed_successfully
