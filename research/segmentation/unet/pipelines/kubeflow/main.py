@@ -20,7 +20,7 @@ def pipeline():
     test_task = test()
     
     test_task.after(train_task)
-
+ 
 if __name__ == "__main__":
     from kfp.compiler import Compiler
     
