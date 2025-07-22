@@ -1,14 +1,24 @@
-version: '3.9'
 services:
   train:
     build:
-      context: ../../..
-      dockerfile: docker/segmentation/unet/Dockerfile.train
+      context: ../../../..
+      dockerfile: docker/segmentation/unet/Dockerfile
+    image: unet:v0.1.0
+    volumes:
+      - /home/luke/AI/research/datasets:/workspace/datasets
+      - /home/luke/AI/research/outputs:/workspace/outputs
+    command: [ "python3", "segmentation/unet/train_with_hydra.py" ]
 
   test:
     build:
-      context: ../../..
-      dockerfile: docker/segmentation/unet/Dockerfile.test
+      context: ../../../..
+      dockerfile: docker/segmentation/unet/Dockerfile
+    image: unet:v0.1.0
     depends_on:
       train:
         condition: service_completed_successfully
+    volumes:
+      - /home/luke/AI/research/datasets:/workspace/datasets
+      - /home/luke/AI/research/outputs:/workspace/outputs
+    command: [ "python3", "segmentation/unet/test_with_hydra.py" ]
+
