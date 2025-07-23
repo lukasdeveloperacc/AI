@@ -1,0 +1,251 @@
+# PIPELINE DEFINITION
+# Name: pipeline
+# Inputs:
+#    checkpoint_path: str
+#    epochs: int
+#    export_onnx: bool
+#    export_tensorrt: bool
+#    test_batch_size: int
+#    test_config_name: str [Default: 'test']
+#    test_dataset: str
+#    test_device: str
+#    test_loss: str
+#    test_network: str
+#    test_trainer: str
+#    train_batch_size: int
+#    train_config_name: str [Default: 'train']
+#    train_dataset: str
+#    train_device: str
+#    train_loss: str
+#    train_network: str
+#    train_optimizer: str
+#    train_trainer: str
+components:
+  comp-test:
+    executorLabel: exec-test
+    inputDefinitions:
+      parameters:
+        batch_size:
+          isOptional: true
+          parameterType: NUMBER_INTEGER
+        checkpoint_path:
+          isOptional: true
+          parameterType: STRING
+        config_name:
+          defaultValue: test
+          isOptional: true
+          parameterType: STRING
+        dataset:
+          isOptional: true
+          parameterType: STRING
+        device:
+          isOptional: true
+          parameterType: STRING
+        export_onnx:
+          isOptional: true
+          parameterType: BOOLEAN
+        export_tensorrt:
+          isOptional: true
+          parameterType: BOOLEAN
+        loss:
+          isOptional: true
+          parameterType: STRING
+        network:
+          isOptional: true
+          parameterType: STRING
+        trainer:
+          isOptional: true
+          parameterType: STRING
+  comp-train:
+    executorLabel: exec-train
+    inputDefinitions:
+      parameters:
+        batch_size:
+          isOptional: true
+          parameterType: NUMBER_INTEGER
+        config_name:
+          defaultValue: train
+          isOptional: true
+          parameterType: STRING
+        dataset:
+          isOptional: true
+          parameterType: STRING
+        device:
+          isOptional: true
+          parameterType: STRING
+        epochs:
+          isOptional: true
+          parameterType: NUMBER_INTEGER
+        loss:
+          isOptional: true
+          parameterType: STRING
+        network:
+          isOptional: true
+          parameterType: STRING
+        optimizer:
+          isOptional: true
+          parameterType: STRING
+        trainer:
+          isOptional: true
+          parameterType: STRING
+deploymentSpec:
+  executors:
+    exec-test:
+      container:
+        command:
+        - python3
+        - segmentation/unet/test_with_hydra.py
+        - --config-name
+        - '{{$.inputs.parameters[''config_name'']}}'
+        - dataset={{$.inputs.parameters['dataset']}}
+        - network={{$.inputs.parameters['network']}}
+        - loss={{$.inputs.parameters['loss']}}
+        - trainer={{$.inputs.parameters['trainer']}}
+        - trainer.UnetTrainer.device={{$.inputs.parameters['device']}}
+        - trainer.UnetTrainer.batch_size={{$.inputs.parameters['batch_size']}}
+        - trainer.UnetTrainer.pretrained_checkpoint_path={{$.inputs.parameters['checkpoint_path']}}
+        - trainer.UnetTrainer.is_export_onnx={{$.inputs.parameters['export_onnx']}}
+        - trainer.UnetTrainer.is_export_tensorrt={{$.inputs.parameters['export_tensorrt']}}
+        image: unet:v0.1.0
+    exec-train:
+      container:
+        command:
+        - python3
+        - segmentation/unet/train_with_hydra.py
+        - --config-name
+        - '{{$.inputs.parameters[''config_name'']}}'
+        - dataset={{$.inputs.parameters['dataset']}}
+        - network={{$.inputs.parameters['network']}}
+        - optimizer={{$.inputs.parameters['optimizer']}}
+        - loss={{$.inputs.parameters['loss']}}
+        - trainer={{$.inputs.parameters['trainer']}}
+        - trainer.UnetTrainer.epochs={{$.inputs.parameters['epochs']}}
+        - trainer.UnetTrainer.device={{$.inputs.parameters['device']}}
+        - trainer.UnetTrainer.batch_size={{$.inputs.parameters['batch_size']}}
+        image: unet:v0.1.0
+pipelineInfo:
+  name: pipeline
+root:
+  dag:
+    tasks:
+      test:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-test
+        dependentTasks:
+        - train
+        inputs:
+          parameters:
+            batch_size:
+              componentInputParameter: test_batch_size
+            checkpoint_path:
+              componentInputParameter: checkpoint_path
+            config_name:
+              componentInputParameter: test_config_name
+            dataset:
+              componentInputParameter: test_dataset
+            device:
+              componentInputParameter: test_device
+            export_onnx:
+              componentInputParameter: export_onnx
+            export_tensorrt:
+              componentInputParameter: export_tensorrt
+            loss:
+              componentInputParameter: test_loss
+            network:
+              componentInputParameter: test_network
+            trainer:
+              componentInputParameter: test_trainer
+        taskInfo:
+          name: test
+      train:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-train
+        inputs:
+          parameters:
+            batch_size:
+              componentInputParameter: train_batch_size
+            config_name:
+              componentInputParameter: train_config_name
+            dataset:
+              componentInputParameter: train_dataset
+            device:
+              componentInputParameter: train_device
+            epochs:
+              componentInputParameter: epochs
+            loss:
+              componentInputParameter: train_loss
+            network:
+              componentInputParameter: train_network
+            optimizer:
+              componentInputParameter: train_optimizer
+            trainer:
+              componentInputParameter: train_trainer
+        taskInfo:
+          name: train
+  inputDefinitions:
+    parameters:
+      checkpoint_path:
+        isOptional: true
+        parameterType: STRING
+      epochs:
+        isOptional: true
+        parameterType: NUMBER_INTEGER
+      export_onnx:
+        isOptional: true
+        parameterType: BOOLEAN
+      export_tensorrt:
+        isOptional: true
+        parameterType: BOOLEAN
+      test_batch_size:
+        isOptional: true
+        parameterType: NUMBER_INTEGER
+      test_config_name:
+        defaultValue: test
+        isOptional: true
+        parameterType: STRING
+      test_dataset:
+        isOptional: true
+        parameterType: STRING
+      test_device:
+        isOptional: true
+        parameterType: STRING
+      test_loss:
+        isOptional: true
+        parameterType: STRING
+      test_network:
+        isOptional: true
+        parameterType: STRING
+      test_trainer:
+        isOptional: true
+        parameterType: STRING
+      train_batch_size:
+        isOptional: true
+        parameterType: NUMBER_INTEGER
+      train_config_name:
+        defaultValue: train
+        isOptional: true
+        parameterType: STRING
+      train_dataset:
+        isOptional: true
+        parameterType: STRING
+      train_device:
+        isOptional: true
+        parameterType: STRING
+      train_loss:
+        isOptional: true
+        parameterType: STRING
+      train_network:
+        isOptional: true
+        parameterType: STRING
+      train_optimizer:
+        isOptional: true
+        parameterType: STRING
+      train_trainer:
+        isOptional: true
+        parameterType: STRING
+schemaVersion: 2.1.0
+sdkVersion: kfp-2.13.0

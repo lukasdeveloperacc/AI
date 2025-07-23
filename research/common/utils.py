@@ -1,12 +1,14 @@
 from typing import Tuple
 from dataclasses import make_dataclass, field
 from typing import Any, Optional
+from numpy.strings import lower
+from pydantic import BaseModel
 
 import torch.nn as nn
 import pandas as pd
-import logging, torch, yaml, inspect
+import logging, torch, yaml, inspect, os, inspect
 
-
+    
 class DatasetUtil:
     def __init__(self):
         pass
@@ -23,6 +25,7 @@ class DatasetUtil:
         logging.info(f"Train-test split: {len(train_df)} train samples, {len(test_df)} test samples")
 
         return train_df, test_df
+
 
 
 class MetricUtil:
@@ -47,28 +50,17 @@ class MetricUtil:
 
 
 class ConfigUtil:
+    def __init__(self) -> None:
+        pass
+    
     @staticmethod
-    def load_yaml(path: str) -> dict:
-        cfg = None
+    def create_from_config_to_yaml(obj: BaseModel) -> None:
+        class_name: str = obj.__class__.__name__
+        filename: str = class_name.removesuffix("Config")
+        save_dir = os.path.dirname(inspect.getfile(obj.__class__))
+        with open(f"{save_dir}/{filename}2.yaml", "w") as f:
+            if "compose" in obj.__class__.__name__.lower():
+                yaml.dump(obj.model_dump(), f, sort_keys=False)
+            else:
+                yaml.dump({filename: obj.model_dump()}, f, sort_keys=False)
 
-        try:
-            with open(path, "r") as f:
-                cfg = yaml.safe_load(f)
-
-        except Exception as e:
-            logging.error(e)
-
-        return cfg
-
-    @staticmethod
-    def make_loss_config_class(loss_cls: type[nn.Module]):
-        sig = inspect.signature(loss_cls)
-        fields = []
-
-        for name, param in sig.parameters.items():
-            annotation = param.annotation if param.annotation != inspect._empty else Any
-            default = param.default if param.default != inspect._empty else field(default=None)
-            fields.append((name, annotation, default))
-
-        cls_name = f"{loss_cls.__name__}Config"
-        return make_dataclass(cls_name, fields)

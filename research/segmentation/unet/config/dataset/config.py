@@ -1,6 +1,5 @@
 from pydantic import BaseModel
-from common.datasets import MVTecDataset
-
+from common.utils import ConfigUtil
 
 class BaseDatasetConfig(BaseModel):
     pass
@@ -12,6 +11,13 @@ class MVTecDatasetConfig(BaseDatasetConfig):
     resize: int = 256
 
 
-class AnotherDatasetConfig(BaseModel):
+class AnotherDatasetConfig(BaseDatasetConfig):
     param1: int = 1
     param2: str = "aa"
+
+class ComposeDatasetConfig(BaseDatasetConfig):
+    MVTecDataset: MVTecDatasetConfig = MVTecDatasetConfig()
+    AnotherDataset: AnotherDatasetConfig = AnotherDatasetConfig()
+
+if __name__ == "__main__":
+    ConfigUtil.create_from_config_to_yaml(ComposeDatasetConfig())
