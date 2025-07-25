@@ -19,5 +19,4 @@ class ComposeDatasetConfig(BaseDatasetConfig):
     MVTecDataset: MVTecDatasetConfig = MVTecDatasetConfig()
     AnotherDataset: AnotherDatasetConfig = AnotherDatasetConfig()
 
-if __name__ == "__main__":
-    ConfigUtil.create_from_config_to_yaml(ComposeDatasetConfig())
+ConfigUtil.create_from_config_to_yaml_when_importing()

@@ -1,5 +1,5 @@
 from common.base import BaseTrainer, BaseDataset
-from common.loggers import MLflowLogger
+from common.loggers import PythonLogger 
 from omegaconf import DictConfig, OmegaConf
 from segmentation.unet.config.config import TestConfig
 
@@ -63,7 +63,7 @@ def main(cfg: DictConfig):
     test_config.trainer.get(name).loss_fn = loss_fn
 
     parameters = test_config.trainer.get(name).__dict__
-    logger = MLflowLogger(run_name="second-experiment", tracking_uri="http://172.30.1.149:5000", **parameters)
+    logger = PythonLogger(name="second-experiment", level=logging.INFO)
     test_config.trainer.get(name).logger = logger
     trainer: BaseTrainer = getattr(trainer_pkg, name)(**parameters)
 

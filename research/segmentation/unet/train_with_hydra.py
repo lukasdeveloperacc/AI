@@ -1,5 +1,9 @@
+import logging
+
+logging.basicConfig(level=logging.INFO)
+
 from common.base import BaseTrainer, BaseDataset
-from common.loggers import MLflowLogger
+from common.loggers import MLflowLogger, PythonLogger
 from omegaconf import DictConfig, OmegaConf
 from segmentation.unet.config.config import TrainConfig
 
@@ -12,7 +16,8 @@ import logging, torch, hydra
 @hydra.main(config_path="config", config_name="train", version_base="1.3")
 def main(cfg: DictConfig):
     logging.info(f"Before : {cfg}")
-    train_config = TrainConfig(**OmegaConf.to_container(cfg, resolve=True))
+    omgeaconf = OmegaConf.to_container(cfg, resolve=True, structured_config_mode="dict")
+    train_config = TrainConfig(**omgeaconf)
     logging.info(f"Launching training with config:\n{train_config}")
 
     datasets = []
@@ -64,7 +69,8 @@ def main(cfg: DictConfig):
     logging.info(f"Set optimizer : {optimizer}")
 
     scheduler = None
-
+    
+    logging.info(f"Trainer : {train_config.trainer}")
     name = next(iter(train_config.trainer))
 
     train_config.trainer.get(name).dataset = dataset
@@ -74,7 +80,8 @@ def main(cfg: DictConfig):
     train_config.trainer.get(name).scheduler = scheduler
 
     parameters = train_config.trainer.get(name).__dict__
-    logger = MLflowLogger(run_name="second-experiment", tracking_uri="http://172.30.1.149:5000", **parameters)
+    # logger = MLflowLogger(run_name="second-experiment", tracking_uri="http://172.30.1.149:5000", **parameters)
+    logger = PythonLogger(name="second-experiment", level=logging.INFO)
     train_config.trainer.get(name).logger = logger
     trainer: BaseTrainer = getattr(trainer_pkg, name)(**parameters)
 

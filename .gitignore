@@ -4,3 +4,4 @@ __pycache__/
 *.png
 outputs/
 .venv/
+segmentation/unet/config/*.yaml

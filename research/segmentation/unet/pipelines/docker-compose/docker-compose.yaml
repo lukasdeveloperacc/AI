@@ -21,4 +21,3 @@ services:
       - /home/luke/AI/research/datasets:/workspace/datasets
       - /home/luke/AI/research/outputs:/workspace/outputs
     command: [ "python3", "segmentation/unet/test_with_hydra.py" ]
-

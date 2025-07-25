@@ -1,9 +1,15 @@
 UnetTrainer:
-  device: "cuda:0"
+  dataset: null
+  network: null
+  optimizer: null
+  loss_fn: null
+  scheduler: null
+  logger: null
+  device: cuda:0
   batch_size: 32
-  epochs: null
+  epochs: 0
   including_test: false
-  checkpoint_dir: "outputs/checkpoints"
-  pretrained_checkpoint_path: ""
+  checkpoint_dir: outputs/checkpoints
+  pretrained_checkpoint_path: ''
   is_export_onnx: false
   is_export_tensorrt: false

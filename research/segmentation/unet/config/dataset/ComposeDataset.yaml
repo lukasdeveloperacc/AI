@@ -1,8 +1,9 @@
 MVTecDataset:
   root_dir: datasets/mvtec
-  data_extensions: ["jpg", "png"]
+  data_extensions:
+  - jpg
+  - png
   resize: 256
-
 AnotherDataset:
   param1: 1
-  param2: "aaa"
+  param2: aa

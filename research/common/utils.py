@@ -56,11 +56,29 @@ class ConfigUtil:
     @staticmethod
     def create_from_config_to_yaml(obj: BaseModel) -> None:
         class_name: str = obj.__class__.__name__
-        filename: str = class_name.removesuffix("Config")
         save_dir = os.path.dirname(inspect.getfile(obj.__class__))
-        with open(f"{save_dir}/{filename}2.yaml", "w") as f:
+        filename: str = class_name.removesuffix("Config")
+        file_path = f"{save_dir}/{filename}.yaml"
+        
+        if os.path.exists(file_path):
+            logging.info(f"[{ConfigUtil.__class__.__name__}] {filename} already exists")
+            return
+
+        with open(file_path, "w") as f:
             if "compose" in obj.__class__.__name__.lower():
                 yaml.dump(obj.model_dump(), f, sort_keys=False)
             else:
                 yaml.dump({filename: obj.model_dump()}, f, sort_keys=False)
+
+    @staticmethod
+    def create_from_config_to_yaml_when_importing() -> None:
+        current_module = inspect.getmodule(inspect.stack()[1][0])
+        logging.info(f"current module : {current_module}")
+        for name, cls in inspect.getmembers(current_module, inspect.isclass):
+            if issubclass(cls, BaseModel) and cls.__module__ == current_module.__name__:
+                try:
+                    instance = cls()
+                    ConfigUtil.create_from_config_to_yaml(instance)
+                except Exception as e:
+                    logging.error(f"[{name}] {cls.__name__}: {e}")
 

@@ -6,9 +6,3 @@ defaults:
   - loss: CrossEntropyLoss
   - trainer: UnetTrainer
   - _self_
-
-trainer:
-  UnetTrainer:
-    device: cuda:0
-    pretrained_checkpoint_path: /workspace/outputs/checkpoints/epoch_3.pt
-    is_export_tensorrt: true
