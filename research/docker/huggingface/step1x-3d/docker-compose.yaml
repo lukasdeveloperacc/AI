@@ -1,0 +1,18 @@
+version: '3.9'
+
+services:
+  step1x-3d-dev:
+    build:
+      context: ../../..
+      dockerfile: docker/huggingface/step1x-3d/Dockerfile
+    environment:
+      - PYTHONPATH=${PYTHONPATH}:/workspace
+    volumes:
+      - ../../../datasets/step1x-3d:/workspace/datasets/step1x-3d
+    command: ["tail", "-f", "/dev/null"]
+
+  step1x-3d:
+    build:
+      context: ../../..
+      dockerfile: docker/huggingface/step1x-3d/Dockerfile
+
