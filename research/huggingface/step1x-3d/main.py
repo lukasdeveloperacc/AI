@@ -13,12 +13,12 @@ import torch
 import glob
 import magic
 
-image_dir = 'datasets/step1x-3d'
-all_files = glob.glob(os.path.join(image_dir, '*')) 
+image_dir = "data/step1x-3d"
+all_files = glob.glob(os.path.join(image_dir, "*"))
 
 mime = magic.Magic(mime=True)
 
-image_files = [f for f in all_files if mime.from_file(f).startswith('image/')]
+image_files = [f for f in all_files if mime.from_file(f).startswith("image/")]
 
 if image_files:
     image_path = image_files[0]
@@ -26,14 +26,15 @@ if image_files:
 else:
     print("No image files found in ./test/img/")
 
-result_dir = 'outputs/step1x-3d'
+result_dir = "outputs/step1x-3d"
+
 
 def geometry_pipeline(input_image_path, save_glb_path):
     """
     The base geometry model, input image generate glb
     """
     pipeline = Step1X3DGeometryPipeline.from_pretrained(
-        "stepfun-ai/Step1X-3D", subfolder='Step1X-3D-Geometry-1300m'
+        "stepfun-ai/Step1X-3D", subfolder="Step1X-3D-Geometry-1300m"
     ).to("cuda")
 
     generator = torch.Generator(device=pipeline.device)
@@ -43,12 +44,13 @@ def geometry_pipeline(input_image_path, save_glb_path):
     os.makedirs(os.path.dirname(save_glb_path), exist_ok=True)
     out.mesh[0].export(save_glb_path)
 
+
 def geometry_label_pipeline(input_image_path, save_glb_path):
     """
     The label geometry model, support using label to control generation, input image generate glb
     """
     pipeline = Step1X3DGeometryPipeline.from_pretrained(
-        "stepfun-ai/Step1X-3D", subfolder='Step1X-3D-Geometry-Label-1300m'
+        "stepfun-ai/Step1X-3D", subfolder="Step1X-3D-Geometry-Label-1300m"
     ).to("cuda")
     generator = torch.Generator(device=pipeline.device)
     generator.manual_seed(2025)
@@ -60,11 +62,12 @@ def geometry_label_pipeline(input_image_path, save_glb_path):
         octree_resolution=384,
         max_facenum=400000,
         num_inference_steps=50,
-        generator=generator
+        generator=generator,
     )
 
     os.makedirs(os.path.dirname(save_glb_path), exist_ok=True)
     out.mesh[0].export(save_glb_path)
+
 
 def texture_pipeline(input_image_path, input_glb_path, save_glb_path):
     """
@@ -77,6 +80,7 @@ def texture_pipeline(input_image_path, input_glb_path, save_glb_path):
     textured_mesh = pipeline(input_image_path, mesh, seed=2025)
     os.makedirs(os.path.dirname(save_glb_path), exist_ok=True)
     textured_mesh.export(save_glb_path)
+
 
 if __name__ == "__main__":
     geometry_pipeline(image_path, f"{result_dir}/output.glb")

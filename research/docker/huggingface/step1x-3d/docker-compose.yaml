@@ -5,14 +5,32 @@ services:
     build:
       context: ../../..
       dockerfile: docker/huggingface/step1x-3d/Dockerfile
-    environment:
-      - PYTHONPATH=${PYTHONPATH}:/workspace
     volumes:
-      - ../../../datasets/step1x-3d:/workspace/datasets/step1x-3d
+      - ../../../datasets/step1x-3d:/root/Step1X-3D/data/step1x-3d
+      - ~/.cache/huggingface:/root/.cache/huggingface
+      - ~/.u2net:/root/.u2net
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
     command: ["tail", "-f", "/dev/null"]
 
   step1x-3d:
     build:
       context: ../../..
       dockerfile: docker/huggingface/step1x-3d/Dockerfile
+    volumes:
+      - ../../../datasets/step1x-3d:/root/Step1X-3D/data/step1x-3d
+      - ~/.cache/huggingface:/root/.cache/huggingface
+      - ~/.u2net:/root/.u2net
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
 
