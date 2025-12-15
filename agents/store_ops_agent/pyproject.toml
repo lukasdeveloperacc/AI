@@ -1,7 +1,57 @@
 [project]
 name = "store-ops-agent"
 version = "0.1.0"
-description = "Add your description here"
+description = "StoreOpsAgent - AI-powered store operations assistant"
 readme = "README.md"
-requires-python = ">=3.12"
-dependencies = []
+requires-python = ">=3.13"
+dependencies = [
+    # Core Framework
+    "fastapi>=0.104.0",
+    "uvicorn[standard]>=0.24.0",
+    "pydantic>=2.0",
+
+    # LangGraph & LLM
+    "langgraph>=0.2.0",
+    "langchain>=0.3.0",
+    "langchain-openai>=0.2.0",
+    "openai>=1.0.0",
+
+    # Vector Store & Embedding
+    "faiss-cpu>=1.7.4",
+    "sentence-transformers>=2.2.0",
+
+    # Document Processing
+    "pypdf>=3.0.0",
+    "python-multipart>=0.0.6",
+
+    # Utilities
+    "python-dotenv>=1.0.0",
+    "httpx>=0.25.0",
+    "tenacity>=8.2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "ruff>=0.1.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

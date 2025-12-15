@@ -1,0 +1,1 @@
+"""StoreOpsAgent application package."""
