@@ -3,6 +3,7 @@
 from app.models.schemas import (
     AnswerResponse,
     Citation,
+    ConflictInfo,
     Meta,
     QuestionRequest,
     Verdict,
@@ -11,6 +12,7 @@ from app.models.schemas import (
 __all__ = [
     "AnswerResponse",
     "Citation",
+    "ConflictInfo",
     "Meta",
     "QuestionRequest",
     "Verdict",
