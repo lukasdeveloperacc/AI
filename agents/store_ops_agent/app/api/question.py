@@ -3,8 +3,9 @@
 from fastapi import APIRouter, HTTPException
 
 from app.core.citation_formatter import CitationFormatter
+from app.core.metadata_filter import MetadataFilterParser
 from app.core.tracing import trace_request
-from app.models.schemas import AnswerResponse, Citation, QuestionRequest, Verdict
+from app.models.schemas import AnswerResponse, Citation, FilterInfo, QuestionRequest, Verdict
 
 router = APIRouter(prefix="/api/v1", tags=["questions"])
 
@@ -14,23 +15,49 @@ async def ask_question(request: QuestionRequest) -> AnswerResponse:
     """Ask a question and get an answer with citations.
 
     This endpoint receives a question, retrieves relevant documents,
-    and generates an answer with source citations.
+    and generates an answer with source citations. Supports optional
+    metadata filters to narrow search scope.
 
     Args:
-        request: The question request containing the user's question.
+        request: The question request containing the user's question and optional filters.
 
     Returns:
         AnswerResponse with the answer, citations, and metadata.
 
     Raises:
-        HTTPException: If processing fails.
+        HTTPException: If processing fails or filter parameters are invalid.
     """
+    # Parse and validate filter parameters
+    try:
+        metadata_filter = MetadataFilterParser.parse(
+            store_type=request.store_type,
+            category=request.category,
+            effective_date=request.effective_date,
+            language=request.language,
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=400,
+            detail=str(e),
+        ) from e
+
     with trace_request(topk=request.topk) as tracer:
         try:
             # Record retrieval attempt
             tracer.record_retrieval_attempt()
 
-            # TODO: Implement actual document retrieval and LLM response
+            # Build filter info for response
+            filter_info = None
+            if not metadata_filter.is_empty():
+                filter_dict = metadata_filter.to_dict()
+                filter_info = FilterInfo(
+                    store_type=filter_dict.get("store_type"),
+                    category=filter_dict.get("category"),
+                    effective_date=filter_dict.get("effective_date"),
+                    language=filter_dict.get("language"),
+                )
+
+            # TODO: Implement actual document retrieval with filtering and LLM response
             # For now, return a mock response demonstrating the schema
 
             # Mock citations - will be replaced with actual retrieval results
@@ -76,11 +103,23 @@ async def ask_question(request: QuestionRequest) -> AnswerResponse:
                 "다른 매장 운영 관련 질문이 있으신가요?",
             ]
 
+            # Build meta with filter info
+            meta = tracer.to_meta()
+            meta_with_filter = type(meta)(
+                trace_id=meta.trace_id,
+                topk=meta.topk,
+                retrieval_attempts=meta.retrieval_attempts,
+                latency_ms=meta.latency_ms,
+                verdict=meta.verdict,
+                conflict_info=meta.conflict_info,
+                filter_info=filter_info,
+            )
+
             return AnswerResponse(
                 answer=mock_answer,
                 citations=citations,
                 follow_up_questions=follow_up_questions,
-                meta=tracer.to_meta(),
+                meta=meta_with_filter,
             )
 
         except Exception as e:

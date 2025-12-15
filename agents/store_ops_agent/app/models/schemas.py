@@ -57,6 +57,19 @@ class ConflictInfo(BaseModel):
     )
 
 
+class FilterInfo(BaseModel):
+    """Information about applied search filters."""
+
+    store_type: Optional[str] = Field(default=None, description="Applied store type filter")
+    category: Optional[str] = Field(default=None, description="Applied category filter")
+    effective_date: Optional[str] = Field(default=None, description="Applied effective date filter")
+    language: Optional[str] = Field(default=None, description="Applied language filter")
+    was_relaxed: bool = Field(default=False, description="Whether the filter was relaxed")
+    relaxation_message: Optional[str] = Field(
+        default=None, description="Message about filter relaxation"
+    )
+
+
 class Meta(BaseModel):
     """Metadata about the answer generation process.
 
@@ -73,6 +86,9 @@ class Meta(BaseModel):
     conflict_info: Optional[ConflictInfo] = Field(
         default=None, description="Details about conflicting information when verdict is CONFLICT"
     )
+    filter_info: Optional[FilterInfo] = Field(
+        default=None, description="Information about applied search filters"
+    )
 
 
 class QuestionRequest(BaseModel):
@@ -80,6 +96,22 @@ class QuestionRequest(BaseModel):
 
     question: str = Field(..., min_length=1, max_length=1000, description="User's question")
     topk: int = Field(default=5, ge=1, le=20, description="Number of documents to retrieve")
+    store_type: Optional[str] = Field(
+        default=None,
+        description="Store type filter (e.g., 'cafe', 'convenience', 'apparel', 'restaurant', 'retail')",
+    )
+    category: Optional[str] = Field(
+        default=None,
+        description="Document category filter (e.g., 'refund', 'promo', 'inventory', 'cs', 'operation', 'hr')",
+    )
+    effective_date: Optional[str] = Field(
+        default=None,
+        description="Filter by documents valid on this date (YYYY-MM-DD format)",
+    )
+    language: Optional[str] = Field(
+        default=None,
+        description="Language filter (e.g., 'ko', 'en', 'ja', 'zh')",
+    )
 
 
 class AnswerResponse(BaseModel):
