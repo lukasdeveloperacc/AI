@@ -7,11 +7,21 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class Verdict(str, Enum):
-    """Answer verdict indicating confidence level."""
+    """Answer verdict indicating confidence level.
+
+    Values:
+        ANSWERED: Full answer with sufficient evidence.
+        PARTIAL: Partial answer with limited evidence.
+        NOT_FOUND: No relevant documents found.
+        INSUFFICIENT: Evidence found but insufficient to support a definitive answer.
+        CONFLICT: Conflicting information found in documents.
+    """
 
     ANSWERED = "answered"
     PARTIAL = "partial"
     NOT_FOUND = "not_found"
+    INSUFFICIENT = "insufficient"
+    CONFLICT = "conflict"
 
 
 class Citation(BaseModel):
@@ -25,6 +35,26 @@ class Citation(BaseModel):
     chunk_id: str = Field(..., description="Identifier of the specific chunk within the document")
     snippet: str = Field(..., description="Relevant text excerpt from the document")
     score: float = Field(..., ge=0.0, le=1.0, description="Relevance score (0.0 to 1.0)")
+    effective_date: Optional[str] = Field(
+        default=None, description="Effective date of the document (for conflict resolution)"
+    )
+    version: Optional[str] = Field(
+        default=None, description="Version of the document (for conflict resolution)"
+    )
+
+
+class ConflictInfo(BaseModel):
+    """Information about conflicting citations when verdict is CONFLICT."""
+
+    conflicting_citations: list[str] = Field(
+        ..., description="List of citation doc_ids that conflict"
+    )
+    resolution_basis: Optional[str] = Field(
+        default=None, description="Basis used for conflict resolution (e.g., 'effective_date', 'version')"
+    )
+    recommended_citation_id: Optional[str] = Field(
+        default=None, description="Doc_id of the recommended citation based on resolution"
+    )
 
 
 class Meta(BaseModel):
@@ -40,6 +70,9 @@ class Meta(BaseModel):
     )
     latency_ms: float = Field(..., ge=0.0, description="Total processing time in milliseconds")
     verdict: Verdict = Field(..., description="Confidence level of the answer")
+    conflict_info: Optional[ConflictInfo] = Field(
+        default=None, description="Details about conflicting information when verdict is CONFLICT"
+    )
 
 
 class QuestionRequest(BaseModel):
@@ -53,6 +86,8 @@ class AnswerResponse(BaseModel):
     """Response model containing the answer with citations.
 
     Provides a summarized answer along with source citations and metadata.
+    When evidence is insufficient or conflicting, the answer may be withheld
+    and follow-up questions are provided instead.
     """
 
     answer: str = Field(..., description="Summarized answer (3-5 sentences)")
@@ -61,6 +96,14 @@ class AnswerResponse(BaseModel):
     )
     follow_up_questions: Optional[list[str]] = Field(
         default=None, description="Suggested follow-up questions"
+    )
+    withheld: bool = Field(
+        default=False,
+        description="True if the answer was withheld due to insufficient evidence or conflict",
+    )
+    withheld_reason: Optional[str] = Field(
+        default=None,
+        description="Reason for withholding the answer (when withheld=True)",
     )
     meta: Meta = Field(..., description="Metadata about the answer generation")
 

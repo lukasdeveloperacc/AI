@@ -135,6 +135,8 @@ class MetricsCollector:
             Verdict.ANSWERED: 0,
             Verdict.PARTIAL: 0,
             Verdict.NOT_FOUND: 0,
+            Verdict.INSUFFICIENT: 0,
+            Verdict.CONFLICT: 0,
         }
 
     def record(self, meta: Meta) -> None:
