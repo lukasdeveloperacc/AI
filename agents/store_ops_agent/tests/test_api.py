@@ -19,7 +19,10 @@ class TestRootEndpoint:
         """Test root endpoint returns welcome message."""
         response = client.get("/")
         assert response.status_code == 200
-        assert response.json() == {"message": "Welcome to StoreOpsAgent API"}
+        data = response.json()
+        assert data["message"] == "Welcome to StoreOpsAgent API"
+        assert "version" in data
+        assert "docs" in data
 
 
 class TestHealthEndpoint:
@@ -29,7 +32,9 @@ class TestHealthEndpoint:
         """Test health endpoint returns healthy status."""
         response = client.get("/health")
         assert response.status_code == 200
-        assert response.json() == {"status": "healthy"}
+        data = response.json()
+        assert data["status"] == "healthy"
+        assert "service" in data
 
 
 class TestQuestionEndpoint:
