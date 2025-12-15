@@ -2,11 +2,16 @@
 
 from fastapi import FastAPI
 
+from app.api import question_router
+
 app = FastAPI(
     title="StoreOpsAgent",
     description="AI-powered store operations assistant",
     version="0.1.0",
 )
+
+# Include routers
+app.include_router(question_router)
 
 
 @app.get("/")
