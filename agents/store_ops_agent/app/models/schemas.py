@@ -81,6 +81,9 @@ class Meta(BaseModel):
     retrieval_attempts: int = Field(
         ..., ge=1, description="Number of retrieval attempts made"
     )
+    generation_attempts: int = Field(
+        default=1, ge=1, description="Number of generation attempts made"
+    )
     latency_ms: float = Field(..., ge=0.0, description="Total processing time in milliseconds")
     verdict: Verdict = Field(..., description="Confidence level of the answer")
     conflict_info: Optional[ConflictInfo] = Field(
@@ -167,9 +170,122 @@ class AnswerResponse(BaseModel):
                     "trace_id": "tr_abc123def456",
                     "topk": 5,
                     "retrieval_attempts": 1,
+                    "generation_attempts": 1,
                     "latency_ms": 245.5,
                     "verdict": "answered",
                 },
             }
         }
     )
+
+
+class ChatRequest(BaseModel):
+    """Request model for POST /chat endpoint.
+
+    Follows the PRD Section 10 API specification.
+    """
+
+    question: str = Field(..., min_length=1, max_length=2000, description="User's question")
+    store_type: Optional[str] = Field(
+        default=None,
+        description="Store type filter (e.g., 'cafe', 'convenience', 'apparel', 'restaurant', 'retail')",
+    )
+    category: Optional[str] = Field(
+        default=None,
+        description="Document category filter (e.g., 'refund', 'promo', 'inventory', 'cs', 'operation', 'hr')",
+    )
+    effective_date: Optional[str] = Field(
+        default=None,
+        description="Filter by documents valid on this date (YYYY-MM-DD format)",
+    )
+    language: Optional[str] = Field(
+        default=None,
+        description="Language filter (e.g., 'ko', 'en', 'ja', 'zh')",
+    )
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "question": "환불 정책이 어떻게 되나요?",
+                "store_type": "cafe",
+                "category": "refund",
+                "language": "ko",
+            }
+        }
+    )
+
+
+class ChatResponse(BaseModel):
+    """Response model for POST /chat endpoint.
+
+    Follows the PRD Section 10 API specification with:
+    - answer: Generated answer text
+    - citations: List of source citations
+    - follow_up_question: Single follow-up question (not a list)
+    - meta: Metadata about the generation process
+    """
+
+    answer: str = Field(..., description="Generated answer (3-5 sentences)")
+    citations: list[Citation] = Field(
+        default_factory=list, description="List of source citations supporting the answer"
+    )
+    follow_up_question: Optional[str] = Field(
+        default=None, description="Suggested follow-up question for clarification"
+    )
+    meta: Meta = Field(..., description="Metadata about the answer generation")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "answer": "환불은 구매 후 7일 이내에 가능하며, 영수증 지참이 필요합니다. 단, 식품류의 경우 개봉 전에만 환불이 가능합니다.",
+                "citations": [
+                    {
+                        "doc_id": "doc_refund_001",
+                        "title": "환불 정책 가이드",
+                        "chunk_id": "chunk_005",
+                        "snippet": "구매 후 7일 이내 영수증 지참 시 환불 가능",
+                        "score": 0.95,
+                    }
+                ],
+                "follow_up_question": "특정 상품에 대한 환불 조건이 궁금하신가요?",
+                "meta": {
+                    "trace_id": "tr_abc123def456",
+                    "topk": 8,
+                    "retrieval_attempts": 1,
+                    "generation_attempts": 1,
+                    "latency_ms": 523.4,
+                    "verdict": "answered",
+                },
+            }
+        }
+    )
+
+
+class ErrorDetail(BaseModel):
+    """Error detail model for error responses."""
+
+    code: str = Field(..., description="Error code for client handling")
+    message: str = Field(..., description="Human-readable error message")
+    trace_id: Optional[str] = Field(
+        default=None, description="Trace ID for debugging (if available)"
+    )
+    details: Optional[dict] = Field(
+        default=None, description="Additional error details"
+    )
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "code": "VALIDATION_ERROR",
+                "message": "Invalid date format. Expected YYYY-MM-DD.",
+                "trace_id": "tr_abc123def456",
+                "details": {"field": "effective_date", "received": "2024/01/01"},
+            }
+        }
+    )
+
+
+class ErrorResponse(BaseModel):
+    """Standard error response model."""
+
+    error: ErrorDetail = Field(..., description="Error details")
